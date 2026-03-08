@@ -177,10 +177,16 @@ def process_pair(symbol: str) -> dict:
         roi = (unrealized_profit / initial_margin * 100) if initial_margin != 0 else 0
         position_side = "LONG" if position_amt > 0 else "SHORT"
 
+        capped = initial_margin >= CAPITAL
+
         bullets_pos, bullets_margin = determine_action(roi)
 
         order_result  = None
         margin_result = None
+
+        if capped:
+            bullets_pos    = 0
+            bullets_margin = 0
 
         if bullets_pos > 0:
             bullets_usdt = bullets_pos * BULLET_SIZE
@@ -217,6 +223,7 @@ def process_pair(symbol: str) -> dict:
             "position_side":     position_side,
             "bullets_pos":       bullets_pos,
             "bullets_margin":    bullets_margin,
+            "capped":            capped,
             "order_result":      order_result,
             "margin_result":     margin_result,
         }
@@ -299,7 +306,14 @@ def format_pair_html(result: dict) -> str:
     # No action
     no_action_html = ""
     if result["order_result"] is None and result["margin_result"] is None:
-        no_action_html = """
+        if result.get("capped"):
+            no_action_html = f"""
+        <tr style="background:#fff7ed;">
+          <td style="padding:6px 14px;color:#64748b;">Acción</td>
+          <td style="padding:6px 14px;color:#c2410c;">⛔ Sin acción — margen ({result['initial_margin']:.2f} USDT) ≥ capital ({CAPITAL:.2f} USDT)</td>
+        </tr>"""
+        else:
+            no_action_html = """
         <tr style="background:#fefce8;">
           <td style="padding:6px 14px;color:#64748b;">Acción</td>
           <td style="padding:6px 14px;color:#a16207;">Sin acción (ROI positivo o neutral)</td>
