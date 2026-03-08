@@ -14,9 +14,17 @@ EMAIL_TO       = "hernan.rago.1982@gmail.com"
 
 # ── BingX ──────────────────────────────────────────────────────────────────────
 
-def get_signature(params: dict, secret: str) -> str:
-    query_string = urllib.parse.urlencode(sorted(params.items()))
-    return hmac.new(secret.encode(), query_string.encode(), hashlib.sha256).hexdigest()
+def get_sign(secret: str, params_str: str) -> str:
+    """BingX requiere HMAC-SHA256 sobre el query string SIN ordenar."""
+    return hmac.new(
+        secret.encode("utf-8"),
+        params_str.encode("utf-8"),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+def parse_params(params: dict) -> str:
+    """Convierte dict a query string (sin ordenar, tal como lo requiere BingX)."""
+    return "&".join(f"{k}={v}" for k, v in params.items())
 
 def get_positions(symbol: str = "") -> dict:
     endpoint = "/openApi/swap/v2/user/positions"
@@ -27,9 +35,14 @@ def get_positions(symbol: str = "") -> dict:
     if symbol:
         params["symbol"] = symbol
 
-    params["signature"] = get_signature(params, API_SECRET)
+    params_str = parse_params(params)
+    signature  = get_sign(API_SECRET, params_str)
+
+    # La firma va al final de la URL como parámetro separado
+    url     = f"{BASE_URL}{endpoint}?{params_str}&signature={signature}"
     headers = {"X-BX-APIKEY": API_KEY}
-    response = requests.get(BASE_URL + endpoint, params=params, headers=headers, timeout=10)
+
+    response = requests.get(url, headers=headers, timeout=10)
     response.raise_for_status()
     return response.json()
 
