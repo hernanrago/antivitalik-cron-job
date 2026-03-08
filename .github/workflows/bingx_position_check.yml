@@ -1,19 +1,24 @@
-name: BingX Position Check
+name: BingX DCA
 
 on:
   schedule:
-    # Corre todos los días cada una hora a los 15 minutos (00:15, 01:15, 02:15 ... 23:15 UTC)
-    - cron: "15 * * * *"
+    # Corre diariamente a las 12:00 UTC
+    - cron: "0 12 * * *"
   workflow_dispatch:
     inputs:
-      symbol:
-        description: "Símbolo a consultar (ej: ETH-USDT). Vacío = todos."
+      capital:
+        description: "Capital total en USDT (sobreescribe vars.CAPITAL)"
         required: false
         default: ""
+      dry_run:
+        description: "Modo DRY RUN (no ejecuta órdenes reales)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
-  check-position:
-    name: Check Perpetual Futures Position
+  dca:
+    name: BingX DCA — ADA-USDT + ETH-USDT
     runs-on: ubuntu-latest
 
     steps:
@@ -28,10 +33,11 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run position checker
+      - name: Run DCA bot
         env:
           BINGX_API_KEY: ${{ secrets.BINGX_API_KEY }}
           BINGX_API_SECRET: ${{ secrets.BINGX_API_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          BINGX_SYMBOL: ${{ inputs.symbol }}
+          CAPITAL: ${{ inputs.capital || vars.CAPITAL }}
+          DRY_RUN: ${{ inputs.dry_run || vars.DRY_RUN || 'false' }}
         run: python check_position.py
