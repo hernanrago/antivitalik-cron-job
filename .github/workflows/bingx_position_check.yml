@@ -2,8 +2,8 @@ name: BingX DCA
 
 on:
   schedule:
-    # Corre cada hora (minuto 0) en UTC
-    - cron: "0 * * * *"
+    # Corre cada 4 horas (minuto 0) en UTC
+    - cron: "0 */4 * * *"
   workflow_dispatch:
     inputs:
       capital:
